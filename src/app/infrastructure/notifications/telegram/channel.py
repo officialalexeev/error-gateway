@@ -16,6 +16,9 @@ from tenacity import (
     wait_exponential,
 )
 
+# Telegram message length limit
+TELEGRAM_MESSAGE_LIMIT = 4096
+
 
 class TelegramNotificationChannel(NotificationChannel):
     """Telegram notification channel with retry logic."""
@@ -104,4 +107,25 @@ class TelegramNotificationChannel(NotificationChannel):
             trace = format_stack_trace(group.events[0].stack_trace, max_lines=10)
             text += f"\n📋 *Stack Trace:*\n```\n{trace}\n```\n"
 
-        return text
+        # Ensure message fits within Telegram limit
+        return self._ensure_telegram_limit(text)
+
+    def _ensure_telegram_limit(self, text: str, max_length: int = TELEGRAM_MESSAGE_LIMIT) -> str:
+        """
+        Ensure message fits within Telegram's 4096 character limit.
+        
+        Args:
+            text: Message text to check
+            max_length: Maximum allowed length (default: 4096)
+            
+        Returns:
+            Text truncated to fit within limit with notification suffix
+        """
+        if len(text) <= max_length:
+            return text
+        
+        # Truncate and add notification
+        suffix = "\n\n⚠️ _Message truncated due to Telegram limit_"
+        available_length = max_length - len(suffix)
+        
+        return text[:available_length] + suffix

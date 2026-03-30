@@ -38,23 +38,23 @@ class MultiChannelNotificationService(NotificationService):
             True if notification should be sent
 
         Logic:
-            - Если is_notified=False → первое уведомление, отправляем
-            - Если last_notified_at=None → нет данных, отправляем
-            - Если прошло меньше throttle_minutes → ждём
-            - Иначе → отправляем
+            - If is_notified=False → first notification, send it
+            - If last_notified_at=None → no data, send it
+            - If less than throttle_minutes passed → wait
+            - Otherwise → send it
         """
-        # Первое уведомление для этой группы
+        # First notification for this group
         if not group.is_notified:
             return True
 
-        # Нет данных о времени последнего уведомления
+        # No data about last notification time
         if group.last_notified_at is None:
             return True
 
         now = time.time()
         last_notified = group.last_notified_at.timestamp()
 
-        # Проверяем throttle
+        # Check throttle
         if now - last_notified < throttle_minutes * 60:
             return False
 

@@ -64,28 +64,28 @@ class MaskingService:
         "client_secret",
     }
 
-    # Email: стандартный RFC 5322 (упрощённый)
+    # Email: standard RFC 5322 (simplified)
     EMAIL_PATTERN = re.compile(r"([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})")
 
-    # Phone: строгий E.164 + форматы с разделителями
-    # Избегает false positives для ID пользователей, номеров заказов и т.д.
-    # - E.164: +12345678901 (10-15 цифр после +)
-    # - С разделителями: +1 (234) 567-8901, +1-234-567-8901
-    # - Без +: (123) 456-7890, 123-456-7890 (обязательны скобки или разделители)
+    # Phone: strict E.164 + formats with separators
+    # Avoids false positives for user IDs, order numbers, etc.
+    # - E.164: +12345678901 (10-15 digits after +)
+    # - With separators: +1 (234) 567-8901, +1-234-567-8901
+    # - Without +: (123) 456-7890, 123-456-7890 (parentheses or separators required)
     PHONE_PATTERN = re.compile(
         r"(?:"
-        r"\+[1-9]\d{9,14}|"  # E.164 (10-15 цифр после +)
-        r"\+\d[\d\s\-()]{8,14}|"  # С разделителями после +
-        r"(?:\(\d+\)\s*[\d\s\-]{6,14}|[\d]{2,}[\s\-][\d\s\-]{5,14})"  # Без + (скобки или разделитель)
+        r"\+[1-9]\d{9,14}|"  # E.164 (10-15 digits after +)
+        r"\+\d[\d\s\-()]{8,14}|"  # With separators after +
+        r"(?:\(\d+\)\s*[\d\s\-]{6,14}|[\d]{2,}[\s\-][\d\s\-]{5,14})"  # Without + (parentheses or separator)
         r")"
     )
 
-    # Credit cards: только известные префиксы платёжных систем
-    # Избегает маскировки user_id, order_id и других числовых идентификаторов
-    # - Visa: 4xxx (13-16 цифр)
-    # - Mastercard: 51-55xx (16 цифр)
-    # - American Express: 34/37xx (15 цифр)
-    # - Discover: 6011/65xx (16 цифр)
+    # Credit cards: only known payment system prefixes
+    # Avoids masking user_id, order_id and other numeric identifiers
+    # - Visa: 4xxx (13-16 digits)
+    # - Mastercard: 51-55xx (16 digits)
+    # - American Express: 34/37xx (15 digits)
+    # - Discover: 6011/65xx (16 digits)
     CREDIT_CARD_PATTERN = re.compile(
         r"\b(?:"
         r"4\d{12}(?:\d{3})?|"  # Visa (13-16)
@@ -320,7 +320,7 @@ class InMemoryRateLimitService(RateLimitService):
             cutoff = now - max_age_seconds
             removed = 0
 
-            # Шаг 1: Удалить ключи у которых все timestamps старше cutoff
+            # Step 1: Remove keys where all timestamps are older than cutoff
             keys_to_remove = [
                 key
                 for key, timestamps in self._requests.items()
@@ -331,19 +331,19 @@ class InMemoryRateLimitService(RateLimitService):
                 del self._requests[key]
                 removed += 1
 
-            # Шаг 2: Если превышен лимит ключей, удалить самые старые
+            # Step 2: If key limit exceeded, remove oldest keys
             excess = len(self._requests) - self.max_keys
             if excess > 0:
-                # Оптимизация: предварительно вычисляем min-timestamp для каждого ключа
-                # Сложность: O(n) для вычисления + O(n log n) для сортировки
-                # Вместо: O(n log k * m) где m — количество вызовов key-функции
+                # Optimization: pre-compute min-timestamp for each key
+                # Complexity: O(n) for computation + O(n log n) for sorting
+                # Instead of: O(n log k * m) where m is the number of key function calls
                 keys_with_min = [
                     (min(timestamps) if timestamps else 0, key)
                     for key, timestamps in self._requests.items()
                 ]
-                keys_with_min.sort()  # Сортировка по min-timestamp (первый элемент кортежа)
+                keys_with_min.sort()  # Sort by min-timestamp (first element of tuple)
 
-                # Удаляем excess самых старых ключей
+                # Remove excess oldest keys
                 for _, key in keys_with_min[:excess]:
                     del self._requests[key]
                     removed += 1

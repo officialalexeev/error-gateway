@@ -1,17 +1,17 @@
 """Application DI container — built with punq.
 
-Composition Root — единственное место где импортируются конкретные реализации.
+Composition Root — the only place where concrete implementations are imported.
 
-## Почему это НЕ нарушение Clean Architecture
+## Why this is NOT a Clean Architecture violation
 
-Это стандартный паттерн Dependency Injection:
-- **Domain/Application слои** зависят только от абстракций (Protocol interfaces)
-- **Infrastructure слой** предоставляет конкретные реализации
-- **Composition Root** (этот файл) собирает всё вместе в точке входа
+This is a standard Dependency Injection pattern:
+- **Domain/Application layers** depend only on abstractions (Protocol interfaces)
+- **Infrastructure layer** provides concrete implementations
+- **Composition Root** (this file) wires everything together at the entry point
 
-Импорты из `infrastructure.*` здесь **допустимы и необходимы** для создания
-экземпляров сервисов. Это единственное место в приложении где такие импорты
-разрешены.
+Imports from `infrastructure.*` are **allowed and necessary** here for creating
+service instances. This is the only place in the application where such imports
+are permitted.
 
 ## Registration rules
 

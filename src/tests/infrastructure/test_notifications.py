@@ -80,6 +80,36 @@ class TestTelegramNotificationChannel:
 
             assert result is False
 
+    def test_ensure_telegram_limit_short_message(self, sample_error_group):
+        """Test that short messages are not modified."""
+        channel = TelegramNotificationChannel(
+            bot_token="123:ABC",
+            chat_id="-1001234567",
+        )
+        notification = Notification(error_group=sample_error_group)
+        
+        # Create a short message
+        short_text = "🚨 *ERROR REPORT*\n\nTest message"
+        result = channel._ensure_telegram_limit(short_text)
+        
+        assert result == short_text
+        assert len(result) <= 4096
+
+    def test_ensure_telegram_limit_long_message(self, sample_error_group):
+        """Test that long messages are truncated."""
+        channel = TelegramNotificationChannel(
+            bot_token="123:ABC",
+            chat_id="-1001234567",
+        )
+        
+        # Create a message longer than 4096 characters
+        long_text = "A" * 5000
+        result = channel._ensure_telegram_limit(long_text)
+        
+        assert len(result) <= 4096
+        assert "⚠️ _Message truncated due to Telegram limit_" in result
+        assert result.startswith("A" * 100)  # Should start with original content
+
 
 class TestEmailNotificationChannel:
     """Tests for Email channel."""

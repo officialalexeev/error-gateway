@@ -72,14 +72,14 @@ class ProcessErrorUseCase:
         group.events = [event]
 
         # 7. Send notification (if needed)
-        # IMPORTANT: Сначала отправляем notification, потом обновляем БД для atomicity
-        # Если notify() упадёт — is_notified останется False, следующая попытка через throttle_minutes
+        # IMPORTANT: Send notification first, then update DB for atomicity
+        # If notify() fails — is_notified remains False, next attempt after throttle_minutes
         if self.notification_service.should_notify(group, self.throttle_minutes):
             try:
-                # Сначала отправить notification
+                # Send notification first
                 await self.notification_service.notify(group)
 
-                # Если успешно — обновить БД
+                # If successful — update DB
                 group.mark_as_notified()
                 await self.group_repo.update(group)
 
@@ -88,8 +88,8 @@ class ProcessErrorUseCase:
                     extra={"event": "notification_sent", "group_id": str(group.id)},
                 )
             except Exception as e:
-                # Если notification failed — НЕ обновляем is_notified
-                # Следующая попытка будет через throttle_minutes
+                # If notification failed — do NOT update is_notified
+                # Next attempt will be after throttle_minutes
                 log.error(
                     f"Failed to send notification for group {group.id}: {e}",
                     extra={
