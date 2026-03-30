@@ -1,0 +1,104 @@
+# ============================================
+# Error Gateway - Autonomous Microservice
+# ============================================
+#
+# Deployment Modes:
+#   1. Lite: POSTGRES_USER=(empty) → SQLite + In-Memory
+#   2. Shared: POSTGRES_USER=error_gateway → PostgreSQL + Redis
+#   3. Full: docker-compose.full.yml → PostgreSQL + Redis inside
+#
+# Quick Start:
+#   docker-compose up -d
+#
+# ============================================
+
+services:
+  # ----------------------------------------
+  # Backend (auto-detection)
+  # ----------------------------------------
+  backend:
+    image: ${DOCKER_REGISTRY}error-gateway:${IMAGE_TAG:-latest}
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    container_name: error-gateway
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      # Database (auto-detection via POSTGRES_* variables)
+      # If POSTGRES_USER is not set = SQLite (Lite mode)
+      # If POSTGRES_USER is set = PostgreSQL (Shared/Full mode)
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      # Redis (auto-detection via REDIS_* variables)
+      # If REDIS_HOST is not set = in-memory rate limiting
+      # If REDIS_HOST is set = Redis
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DB=${REDIS_DB}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # Telegram
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN}
+      - TG_CHAT_ID=${TG_CHAT_ID}
+      # Email
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_TO=${EMAIL_TO}
+      # Loki
+      - LOKI_URL=${LOKI_URL}
+      # Application
+      - LOG_LEVEL=${LOG_LEVEL}
+      - LOG_FORMAT=${LOG_FORMAT}
+      - ERROR_RETENTION_DAYS=${ERROR_RETENTION_DAYS}
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE}
+      - NOTIFICATION_THROTTLE_MINUTES=${NOTIFICATION_THROTTLE_MINUTES}
+      - MAX_PAGINATION_LIMIT=${MAX_PAGINATION_LIMIT}
+      # Masking
+      - MASK_EMAIL=${MASK_EMAIL}
+      - MASK_PHONE=${MASK_PHONE}
+      - MASK_CREDIT_CARD=${MASK_CREDIT_CARD}
+      - MASK_TOKENS=${MASK_TOKENS}
+      # CORS
+      - CORS_ORIGINS=${CORS_ORIGINS}
+    volumes:
+      - data:/app/data  # For SQLite
+    networks:
+      - error-gateway-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+
+# ============================================
+# Networks and Volumes
+# ============================================
+networks:
+  error-gateway-network:
+    driver: bridge
+
+volumes:
+  data:

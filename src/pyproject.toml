@@ -1,0 +1,99 @@
+[project]
+name = "error-gateway"
+version = "1.0.0"
+description = "Error Gateway - autonomous microservice for error tracking with notifications"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [
+    { name = "Alexeev Alexandr", email = "officialalexeev@gmail.com" }
+]
+keywords = [
+    "error-tracking",
+    "monitoring",
+    "fastapi",
+    "microservice",
+    "notifications",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    # Web Framework
+    "fastapi>=0.122.0",
+    "uvicorn[standard]>=0.34.0",
+    # Database (Async)
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    # Redis (Async)
+    "redis[hiredis]>=7.4.0",
+    # Validation & Settings
+    "pydantic>=2.12.0",
+    "pydantic-settings>=2.7.0",
+    # Dependency Injection
+    "punq>=0.7.0",
+    # Email (Async)
+    "aiosmtplib>=3.0.0",
+    # HTTP Client (Async)
+    "httpx>=0.28.0",
+    # Logging
+    "loguru>=0.7.0",
+    "aiosqlite>=0.22.1",
+    "prometheus-client>=0.24.1",
+    "tenacity>=9.1.4",
+]
+
+[project.urls]
+Homepage = "https://github.com/officialalexeev/error-gateway"
+Repository = "https://github.com/officialalexeev/error-gateway.git"
+Documentation = "https://github.com/officialalexeev/error-gateway#readme"
+Issues = "https://github.com/officialalexeev/error-gateway/issues"
+
+[project.optional-dependencies]
+dev = [
+    # Testing
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    
+    # Linting & Formatting
+    "ruff>=0.12.0",
+    "black>=24.10.0",
+    "mypy>=1.13.0",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["app"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B"]
+ignore = ["E501", "B008"]
+
+[tool.black]
+target-version = ["py313"]
+line-length = 100
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+namespace_packages = true
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+exclude = ["data*", "tests*"]
+

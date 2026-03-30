@@ -1,0 +1,96 @@
+# ============================================
+# GitHub Actions Workflow for Docker Publishing
+# ============================================
+# Automatically builds and pushes Docker images to Docker Hub
+# on new releases and tags.
+# ============================================
+
+name: Publish Docker Image
+
+on:
+  release:
+    types: [published]
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag to build and push'
+        required: true
+        default: 'latest'
+
+env:
+  DOCKER_IMAGE: officialalexeev/error-gateway
+  WORKDIR: ./src
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      # ============================================
+      # Step 1: Checkout repository
+      # ============================================
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      # ============================================
+      # Step 2: Set up Docker Buildx
+      # ============================================
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      # ============================================
+      # Step 3: Login to Docker Hub
+      # ============================================
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      # ============================================
+      # Step 4: Extract metadata (tags, labels)
+      # ============================================
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_IMAGE }}
+          tags: |
+            type=semver,pattern={{version}},prefix=v
+            type=semver,pattern={{major}}.{{minor}},prefix=v
+            type=semver,pattern={{major}},prefix=v
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            type=raw,value=${{ inputs.tag }},enable=${{ github.event_name == 'workflow_dispatch' }}
+      
+      # ============================================
+      # Step 5: Build and push Docker image
+      # ============================================
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.WORKDIR }}
+          file: ${{ env.WORKDIR }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      # ============================================
+      # Step 6: Verify image pushed successfully
+      # ============================================
+      - name: Verify image pushed successfully
+        run: |
+          echo "✅ Docker image pushed successfully!"
+          echo "Image: ${{ env.DOCKER_IMAGE }}"
+          echo "Tags:"
+          echo "${{ steps.meta.outputs.tags }}"

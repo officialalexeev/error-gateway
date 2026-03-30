@@ -1,0 +1,129 @@
+# ============================================
+# Error Gateway - Full Mode
+# ============================================
+# PostgreSQL + Redis (isolated infrastructure)
+# Use this file only if you need complete
+# isolation from the main project
+# ============================================
+
+services:
+  # ----------------------------------------
+  # Backend (PostgreSQL + Redis)
+  # ----------------------------------------
+  backend:
+    image: ${DOCKER_REGISTRY}error-gateway:${IMAGE_TAG:-latest}
+    build:
+      context: ./src
+      dockerfile: Dockerfile
+    container_name: error-gateway-backend
+    command: >
+      uvicorn app.main:app
+      --host 0.0.0.0
+      --port 8000
+      --reload
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      # Database (PostgreSQL) - explicitly set for Full mode
+      # config.py auto-detects: POSTGRES_USER set → PostgreSQL mode
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      # Redis - explicitly set for Full mode
+      # config.py auto-detects: REDIS_HOST set → Redis mode
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DB=${REDIS_DB}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # Telegram
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN}
+      - TG_CHAT_ID=${TG_CHAT_ID}
+      # Email
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_TO=${EMAIL_TO}
+      # Application
+      - LOG_LEVEL=${LOG_LEVEL}
+      - ERROR_RETENTION_DAYS=${ERROR_RETENTION_DAYS}
+      - RATE_LIMIT_PER_MINUTE=${RATE_LIMIT_PER_MINUTE}
+      - NOTIFICATION_THROTTLE_MINUTES=${NOTIFICATION_THROTTLE_MINUTES}
+      # Masking
+      - MASK_EMAIL=${MASK_EMAIL}
+      - MASK_PHONE=${MASK_PHONE}
+      - MASK_CREDIT_CARD=${MASK_CREDIT_CARD}
+      - MASK_TOKENS=${MASK_TOKENS}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - error-gateway-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.5"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+
+  # ----------------------------------------
+  # PostgreSQL
+  # ----------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: error-gateway-db
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - error-gateway-network
+    restart: unless-stopped
+
+  # ----------------------------------------
+  # Redis
+  # ----------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: error-gateway-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - error-gateway-network
+    restart: unless-stopped
+
+# ============================================
+# Networks and Volumes
+# ============================================
+networks:
+  error-gateway-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
