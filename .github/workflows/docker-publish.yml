@@ -86,7 +86,18 @@ jobs:
           cache-to: type=gha,mode=max
       
       # ============================================
-      # Step 6: Verify image pushed successfully
+      # Step 6: Update Docker Hub description
+      # ============================================
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ env.DOCKER_IMAGE }}
+          readme-filepath: ./README.md
+
+      # ============================================
+      # Step 7: Verify image pushed successfully
       # ============================================
       - name: Verify image pushed successfully
         run: |
